@@ -15,5 +15,6 @@ db.Sequelize = Sequelize;
 
 db.User = require("./user")(sequelize, Sequelize);
 db.Post = require("./post")(sequelize, Sequelize);
+db.RefreshToken = require('./refresh.token')(sequelize, Sequelize);
 
 module.exports = db;

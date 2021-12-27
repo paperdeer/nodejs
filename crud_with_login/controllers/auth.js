@@ -1,6 +1,8 @@
-const { User } = require('../models')
+const db = require('../models')
+const { User, RefreshToken } = db;
 const crypto = require('crypto');
-const jwt = require('jsonwebtoken')
+const jwt = require('jsonwebtoken');
+const config = require('../config/authconfig.json')
 require('dotenv').config();
 
 const salt = 123
@@ -56,11 +58,13 @@ const login = async (req, res, next) => {
                 email,
                 password
             }, process.env.JWT_KEY, {
-                expiresIn: '1h'
+                expiresIn: config.jwtAcessExpiration
             })
+            const refreshToken = await RefreshToken.createToken(user);
             res.status(200).json({
                 message: "로그인 성공",
-                access_token: accessToken
+                access_token: accessToken,
+                refresh_token: refreshToken
             })
         }
     } catch (err) {
@@ -69,7 +73,39 @@ const login = async (req, res, next) => {
     }
 }
 
+const refreshToken = async (req, res) => {
+    const { refresh_token: requestToken } = req.body;
+    if (requestToken === null) res.status(403).json({ message: "Refresh Token is required!" })
+    try {
+        const refreshToken = await RefreshToken.findOne({ where: { token: requestToken } });
+        console.log(refreshToken)
+        if (!refreshToken) {
+            res.status(403).json({ message: "Refresh token is not in database!" })
+            return;
+        }
+        if (RefreshToken.verifyExpiration(refreshToken)) {
+            RefreshToken.destroy({ where: { id: refreshToken.id } })
+            res.status(403).json({
+                message: "Refresh token was expired. Please make a new signin request"
+            });
+            return;
+        }
+        const newAccessToken = jwt.sign({ id: refreshToken.id }, process.env.JWT_KEY, {
+            expiresIn: config.jwtRefreshExpiration
+        })
+        const newRefreshToken = await RefreshToken.createToken(user);
+        return res.status(200).json({
+            access_token: newAccessToken,
+            refresh_token: refreshToken.token
+            // refresh_token: newRefreshToken
+        })
+    } catch (err) {
+        console.error(err)
+    }
+}
+
 module.exports = {
     signUp,
-    login
+    login,
+    refreshToken
 }
