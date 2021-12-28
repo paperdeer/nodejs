@@ -3,14 +3,21 @@ const app = express();
 const router = require("./routes");
 const { sequelize } = require("./models");
 const PORT = process.env.PORT || 8080;
+const cors = require('cors');
 
 
 require("dotenv").config();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-
 app.use("/", router);
+
+const corsOptions = {
+    origin: "*",
+    method: ["GET", "POST", "PATCH", "DELETE"],
+    credentials: true
+}
+app.use(cors(corsOptions))
 
 sequelize.sync({ force: false })
     .then(() => {

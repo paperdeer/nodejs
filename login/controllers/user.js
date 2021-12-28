@@ -54,7 +54,7 @@ const login = async (req, res, next) => {
         })
     } catch (err) {
         console.error(err)
-        next(err);
+        next()
     }
 }
 
